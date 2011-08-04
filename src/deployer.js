@@ -152,7 +152,7 @@ Deployer.prototype.createNewTargets_ = function (names) {
 		var name = names[i++];
 		var dirname = Path.join(root, name);
 		try {
-			FS.mkdirSync(dirname);
+			FS.mkdirSync(dirname, 0777);
 		} catch (err) {
 			return dfr.complete('failure', err);
 		}
