@@ -60,7 +60,7 @@ Deployer.prototype.deployTo = function (target_root) {
 			this.logResults();
 		}
 		console.error('The error was');
-		console.error(err);
+		console.error(err.stack);
 		dfr.complete('failure', err);
 	}
 
