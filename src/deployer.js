@@ -43,6 +43,7 @@ Deployer.prototype.deployTo = function (target_root) {
 	var dfr = new Deferred();
 
 	console.info('-- The deployment process initiated.');
+	console.info(this.repo_.git_dir, '->', target_root);
 
 	function onSuccess() {
 		console.info('== Successfully deployed!');
@@ -59,8 +60,7 @@ Deployer.prototype.deployTo = function (target_root) {
 			console.info('However...');
 			this.logResults();
 		}
-		console.error('The error was');
-		console.error(err.stack);
+		console.log("\n" + err.stack + "\n");
 		dfr.complete('failure', err);
 	}
 
