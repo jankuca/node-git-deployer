@@ -96,10 +96,10 @@ Deployer.prototype.listBranches_ = function () {
 			Object.keys(map).forEach(function (branch) {
 				if (prev_branches.indexOf(branch) === -1) {
 					result.created.push(branch);
-					result.updated.push([branch, null, map[branch]);
+					result.updated.push([branch, null, map[branch]]);
 				}
 				if (prev[branch] !== map[branch]) {
-					result.updated.push([branch, prev[branch], map[branch]);
+					result.updated.push([branch, prev[branch], map[branch]]);
 				}
 				result.all.push(branch);
 			});
