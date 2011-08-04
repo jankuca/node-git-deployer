@@ -42,7 +42,7 @@ Deployer.prototype.deployTo = function (target_root) {
 
 	var dfr = new Deferred();
 
-	if (!Path.exists(target_root)) {
+	if (!Path.existsSync(target_root)) {
 		var err = new Error('The deployment target root (' + target_root + ') does not exist.');
 		console.error('-- The deployment process could not be initialized.');
 		console.error(err.message);
