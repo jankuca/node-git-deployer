@@ -218,8 +218,8 @@ Deployer.prototype.updateTargets_ = function (targets) {
 
 		var target = targets[i++];
 		var dirname = Path.join(root, target[0]);
-		var target = new Repository(dirname);
-		target.pull('origin', target[0], function (err) {
+		var repo = new Repository(dirname);
+		repo.pull('origin', target[0], function (err) {
 			if (err) {
 				dfr.complete('failure', err);
 			} else {
