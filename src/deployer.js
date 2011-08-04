@@ -142,7 +142,7 @@ Deployer.prototype.getPreviousBranchState_ = function () {
 Deployer.prototype.storeBranchState_ = function () {
 	var dfr = new Deferred();
 	var path = Path.join(this.target_root, '.node-git-deployer.json');
-	this.listBranchesAndTipCommits(function (err, state) {
+	this.repo_.listBranchesAndTipCommits(function (err, state) {
 		try {
 			FS.writeFileSync(path, JSON.stringify(state), 'utf8');
 			dfr.complete('success');
