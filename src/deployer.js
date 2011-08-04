@@ -109,8 +109,7 @@ Deployer.prototype.listBranches_ = function () {
 				if (prev_branches.indexOf(branch) === -1) {
 					result.created.push(branch);
 					result.updated.push([branch, null, map[branch]]);
-				}
-				if (prev[branch] !== map[branch]) {
+				} else if (prev[branch] !== map[branch]) {
 					result.updated.push([branch, prev[branch], map[branch]]);
 				}
 				result.all.push(branch);
