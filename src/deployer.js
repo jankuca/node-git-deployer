@@ -23,7 +23,7 @@ Deployer.prototype.logResults = function () {
 		console.info('The following new deployment targets were created:');
 		console.info(this.created_.join(', '));
 	}
-	if (this.updated.length) {
+	if (this.updated_.length) {
 		console.info('The following deployment targets were updated:');
 		this.updated_.forEach(function (item) {
 			console.info([
