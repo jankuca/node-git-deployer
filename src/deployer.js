@@ -56,6 +56,7 @@ Deployer.prototype.deployTo = function (target_root) {
 	function onSuccess() {
 		console.info('== Successfully deployed!');
 		if (this.created_.length || this.updated_.length) {
+			this.storeBranchState_();
 			this.logResults();
 		} else {
 			console.info('However, no changes were made.');
@@ -88,7 +89,6 @@ Deployer.prototype.deployTo = function (target_root) {
 Deployer.prototype.listBranches_ = function () {
 	var self = this;
 	var dfr = new Deferred();
-	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
 
 	var result = {
 		all: [],
@@ -100,7 +100,7 @@ Deployer.prototype.listBranches_ = function () {
 		if (err) {
 			dfr.complete('failure', err);
 		} else {
-			var prev = self.getPreviousBranchInfo_();
+			var prev = self.getPreviousBranchState_();
 			var prev_branches = Object.keys(prev);
 
 			Object.keys(map).forEach(function (branch) {
@@ -123,7 +123,8 @@ Deployer.prototype.listBranches_ = function () {
 /**
  * Gets previous branch state from an ini file stored in the target root
  */
-Deployer.prototype.getPreviousBranchInfo_ = function () {
+Deployer.prototype.getPreviousBranchState_ = function () {
+	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
 	var data = [];
 	try {
 		data = FS.readFileSync(ini_path, 'utf8').split("\n");
@@ -136,8 +137,20 @@ Deployer.prototype.getPreviousBranchInfo_ = function () {
 			prev[line[0]] = line[1];
 		}
 	});
+	this.previous_branch_state_ = prev;
 
 	return prev;
+};
+
+/**
+ * Stores current branch state in an ini file stored in the target root
+ */
+Deployer.prototype.storeBranchState_ = function () {
+	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
+	var data = this.previous_branch_state_.map(function (target) {
+		return target[0] + ' = "' + target[2] + '"';
+	});
+	FS.writeFileSync(ini_path, data, 'utf8');
 };
 
 /**
