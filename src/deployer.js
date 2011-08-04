@@ -69,7 +69,7 @@ Deployer.prototype.deployTo = function (target_root) {
 			console.info('However...');
 			this.logResults();
 		}
-		console.log("\n" + err.stack + "\n");
+		console.error("\n" + err.stack + "\n");
 		dfr.complete('failure', err);
 	}
 
