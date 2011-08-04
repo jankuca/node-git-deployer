@@ -147,10 +147,10 @@ Deployer.prototype.createNewTargets_ = function (names) {
 
 /**
  * Update targets
- * @param {!Array.<Array>} names A list of target basenames
+ * @param {!Array.<Array>} targets A list of targets
  * @return {!Deferred}
  */
-Deployer.prototype.updateTargets_ = function (names) {
+Deployer.prototype.updateTargets_ = function (targets) {
 	var updated = this.updated_;
 	var root = this.target_root;
 	var dfr = new Deferred();
