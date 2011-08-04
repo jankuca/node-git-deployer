@@ -1,5 +1,7 @@
 var FS = require('fs');
+var Path = require('path');
 var Repository = require('node-gitrepo');
+var Deferred = require('deferred');
 
 
 /**

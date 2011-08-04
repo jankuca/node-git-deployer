@@ -1,3 +1,6 @@
 [submodule "lib/node-gitrepo"]
 	path = lib/node-gitrepo
 	url = git://github.com/jankuca/node-gitrepo.git
+[submodule "lib/deferred"]
+	path = lib/deferred
+	url = git://gist.github.com/1124801.git
