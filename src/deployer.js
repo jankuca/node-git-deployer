@@ -177,12 +177,22 @@ Deployer.prototype.createNewTargets_ = function (names) {
 		} catch (err) {
 			if (err.code !== 'EEXIST') {
 				return dfr.complete('failure', err);
+			} else {
+				return iter();
 			}
 		}
 
 		var target = new Repository(dirname);
-		target.init(function () {
-			target.addRemote('origin', source.git_dir, iter);
+		target.init(function (err) {
+			if (err) {
+				return dfr.complete('failure', err);
+			}
+			target.addRemote('origin', source.git_dir, function (err) {
+				if (err) {
+					return dfr.complete('failure', err);
+				}
+				iter();
+			});
 			created.push(name);
 		});
 	}());
