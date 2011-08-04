@@ -175,7 +175,9 @@ Deployer.prototype.createNewTargets_ = function (names) {
 		try {
 			FS.mkdirSync(dirname, 0777);
 		} catch (err) {
-			return dfr.complete('failure', err);
+			if (err.code !== 'EEXIST') {
+				return dfr.complete('failure', err);
+			}
 		}
 
 		var target = new Repository(dirname);
