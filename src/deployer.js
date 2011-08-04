@@ -142,7 +142,7 @@ Deployer.prototype.createNewTargets_ = function (names) {
 
 	var i = 0;
 	(function iter() {
-		if (i === ii) {
+		if (i === names.length) {
 			return dfr.complete('success');
 		}
 
@@ -176,7 +176,7 @@ Deployer.prototype.updateTargets_ = function (targets) {
 
 	var i = 0;
 	(function iter() {
-		if (i === ii) {
+		if (i === targets.length) {
 			return dfr.complete('success');
 		}
 
