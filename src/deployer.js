@@ -56,12 +56,14 @@ Deployer.prototype.deployTo = function (target_root) {
 	function onSuccess() {
 		console.info('== Successfully deployed!');
 		if (this.created_.length || this.updated_.length) {
-			this.storeBranchState_();
 			this.logResults();
+			this.storeBranchState_().thenEnsure(function () {
+				dfr.complete('success');
+			});
 		} else {
 			console.info('However, no changes were made.');
+			dfr.complete('success');
 		}
-		dfr.complete('success');
 	}
 	function onFailure(err) {
 		console.error('-- The deployment process failed.');
@@ -124,33 +126,35 @@ Deployer.prototype.listBranches_ = function () {
  * Gets previous branch state from an ini file stored in the target root
  */
 Deployer.prototype.getPreviousBranchState_ = function () {
-	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
-	var data = [];
+	var path = Path.join(this.target_root, '.node-git-deployer.json');
+	var state = {};
 	try {
-		data = FS.readFileSync(ini_path, 'utf8').split("\n");
+		state = JSON.parse(FS.readFileSync(path, 'utf8'));
 	} catch (err) {}
 
-	var prev = {};
-	data.forEach(function (line) {
-		if (line) {
-			var match = line.match(/(\S+)\s*=\s*"([^"]*)"/);
-			prev[line[0]] = line[1];
-		}
-	});
-	this.previous_branch_state_ = prev;
-
-	return prev;
+	return state;
 };
 
 /**
  * Stores current branch state in an ini file stored in the target root
+ * @return {!Deferred}
  */
 Deployer.prototype.storeBranchState_ = function () {
-	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
-	var data = this.previous_branch_state_.map(function (target) {
-		return target[0] + ' = "' + target[2] + '"';
+	var dfr = new Deferred();
+	var path = Path.join(this.target_root, '.node-git-deployer.json');
+	this.listBranchesAndTipCommits(function (err, state) {
+		try {
+			FS.writeFileSync(path, JSON.stringify(state), 'utf8');
+			dfr.complete('success');
+		} catch (err) {
+			console.warn('Failed to store the new branch state. ' +
+				'The next deployment will work with the old state.');
+			console.error(err.stack);
+			dfr.complete('failure', err);
+		}
 	});
-	FS.writeFileSync(ini_path, data, 'utf8');
+
+	return dfr;
 };
 
 /**
@@ -221,11 +225,15 @@ Deployer.prototype.updateTargets_ = function (targets) {
 		var repo = new Repository(dirname);
 		repo.pull('origin', target[0], function (err) {
 			if (err) {
-				dfr.complete('failure', err);
-			} else {
+				return dfr.complete('failure', err);
+			}
+			repo.updateSubmodules(function (err) {
+				if (err) {
+					return dfr.complete('failure', err);
+				}
 				updated.push(target);
 				iter();
-			}
+			});
 		});
 	}());
 
