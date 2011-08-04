@@ -38,7 +38,7 @@ Deployer.prototype.logResults = function () {
  * @param {string} target_root The target repository directory path
  */
 Deployer.prototype.deployTo = function (target_root) {
-	this.target_root = target;
+	this.target_root = target_root;
 
 	var dfr = new Deferred();
 
@@ -75,6 +75,7 @@ Deployer.prototype.deployTo = function (target_root) {
  * @return {!Deferred}
  */
 Deployer.prototype.listBranches_ = function () {
+	var self = this;
 	var dfr = new Deferred();
 	var ini_path = Path.join(this.target_root, '.node-git-deployer.ini');
 
@@ -88,10 +89,8 @@ Deployer.prototype.listBranches_ = function () {
 		if (err) {
 			dfr.complete('failure', err);
 		} else {
-			var prev = {};
-			try {
-				prev = FS.readFileSync(ini_path, 'utf8');
-			} catch (err) {}
+			var prev = self.getPreviousBranchInfo_();
+			var prev_branches = Object.keys(prev);
 
 			Object.keys(map).forEach(function (branch) {
 				if (prev_branches.indexOf(branch) === -1) {
@@ -108,6 +107,26 @@ Deployer.prototype.listBranches_ = function () {
 	});
 
 	return dfr;
+};
+
+/**
+ * Gets previous branch state from an ini file stored in the target root
+ */
+Deployer.prototype.getPreviousBranchInfo_ = function () {
+	var data = [];
+	try {
+		data = FS.readFileSync(ini_path, 'utf8').split("\n");
+	} catch (err) {}
+
+	var prev = {};
+	data.forEach(function (line) {
+		if (line) {
+			var match = line.match(/(\S+)\s*=\s*"([^"]*)"/);
+			prev[line[0]] = line[1];
+		}
+	});
+
+	return prev;
 };
 
 /**
