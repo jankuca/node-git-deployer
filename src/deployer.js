@@ -51,6 +51,7 @@ Deployer.prototype.deployTo = function (target_root) {
 		} else {
 			console.info('However, no changes were made.');
 		}
+		dfr.complete('success');
 	}
 	function onFailure(err) {
 		console.error('-- The deployment process failed.');
@@ -58,6 +59,8 @@ Deployer.prototype.deployTo = function (target_root) {
 			console.info('However...');
 			this.logResults();
 		}
+		console.error('The error was');
+		console.error(err);
 		dfr.complete('failure', err);
 	}
 
