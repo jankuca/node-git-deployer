@@ -7,3 +7,6 @@
 [submodule "lib/process-input"]
 	path = lib/process-input
 	url = git://gist.github.com/1083108.git
+[submodule "lib/node-color-console"]
+	path = lib/node-color-console
+	url = git://gist.github.com/1127679
