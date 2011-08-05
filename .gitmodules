@@ -4,3 +4,6 @@
 [submodule "lib/deferred"]
 	path = lib/deferred
 	url = git://gist.github.com/1124801.git
+[submodule "lib/process-input"]
+	path = lib/process-input
+	url = git://gist.github.com/1083108.git
