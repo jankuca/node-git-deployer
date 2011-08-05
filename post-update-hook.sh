@@ -10,5 +10,4 @@ unset GIT_DIR
 #   The repository name will be appended
 #   If a repository called /whatever/abc.git gets updated,
 #   its branches are deployed into /var/apps/abc if you keep the setting below.
-node ~/deployer/deploy.js \
-	-to /var/apps
+node ~/deployer/deploy.js -to /var/apps
