@@ -23,7 +23,7 @@ var dfr = deployer.deployTo(target_dirname);
 if (proxy_port) {
 	dfr.then(function (result) {
 		var versions = result.updated.map(function (item) {
-			return [name, item[0]];
+			return item[0];
 		});
 		var starter = new Starter(name, proxy_port);
 		starter.restartVersions(versions);
