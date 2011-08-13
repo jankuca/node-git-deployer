@@ -56,8 +56,8 @@ Deployer.prototype.deployTo = function (target_root) {
 	function onSuccess() {
 		console.info('== Successfully deployed!');
 		var result = {
-			created: this.created,
-			updated: this.updated
+			created: this.created_,
+			updated: this.updated_
 		};
 		if (this.created_.length || this.updated_.length) {
 			this.logResults();
