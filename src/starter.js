@@ -1,3 +1,6 @@
+var HTTP = require('http');
+
+
 var Starter = function (name, port) {
 	this.name_ = name;
 	this.port_ = port;

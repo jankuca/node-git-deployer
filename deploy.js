@@ -1,4 +1,3 @@
-var HTTP = require('http');
 var Path = require('path');
 
 require.paths.unshift(Path.join(__dirname, 'lib'));
