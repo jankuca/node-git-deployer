@@ -14,8 +14,10 @@ Starter.prototype.restartVersions = function (versions) {
 				iter(++i);
 			});
 		} else {
-			console.info('The following branches were restarted:');
-			console.info(restarted.join(', '));
+			if (restarted.length) {
+				console.info('The following branches were restarted:');
+				console.info(restarted.join(', '));
+			}
 		}
 	}(0));
 };
