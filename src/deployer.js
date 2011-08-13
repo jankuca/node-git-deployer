@@ -55,14 +55,18 @@ Deployer.prototype.deployTo = function (target_root) {
 
 	function onSuccess() {
 		console.info('== Successfully deployed!');
+		var result = {
+			created: this.created,
+			updated: this.updated
+		};
 		if (this.created_.length || this.updated_.length) {
 			this.logResults();
 			this.storeBranchState_().thenEnsure(function () {
-				dfr.complete('success');
+				dfr.complete('success', result);
 			});
 		} else {
 			console.info('However, no changes were made.');
-			dfr.complete('success');
+			dfr.complete('success', result);
 		}
 	}
 	function onFailure(err) {
