@@ -7,7 +7,7 @@ require('node-color-console');
 
 var Repository = require('node-gitrepo');
 var Deployer = require('./index');
-var Starter = require('./starter');
+var Starter = require('./src/starter');
 
 var input = require('process-input');
 
