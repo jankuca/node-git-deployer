@@ -9,7 +9,7 @@ var Starter = function (name, port) {
 };
 
 Starter.prototype.restartVersions = function (versions, callback) {
-	var dfr = new Deffered();
+	var dfr = new Deferred();
 
 	var self = this;
 	var restarted = [];
