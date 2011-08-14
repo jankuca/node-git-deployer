@@ -285,7 +285,6 @@ Deployer.prototype.startMiddleware_ = function () {
  * }) : Deferred>} result
  */
 Deployer.middleware = [];
-Deployer.middleware.push(require('./middleware/starter.js'));
 
 
 module.exports = Deployer;
