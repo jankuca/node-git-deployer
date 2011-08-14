@@ -85,6 +85,9 @@ Deployer.prototype.deployTo = function (target_root) {
 		}, onFailure, this);
 	}, onFailure, this);
 
+	// Middleware
+	dfr.thenEnsure(this.startMiddleware_(), this);
+
 	return dfr;
 };
 
@@ -242,6 +245,41 @@ Deployer.prototype.updateTargets_ = function (targets) {
 
 	return dfr;
 };
+
+/**
+ * Loops through all registered middleware and uses them one by one
+ *   If a middleware ends with a failure, the loop continues.
+ *   This behavior might change in the future.
+ * @return {Deferred}
+ */
+Deployer.prototype.startMiddleware_ = function () {
+	var dfr = new Deferred();
+
+	var result = {
+		created: this.created_,
+		updated: this.updated_
+	};
+	var middleware = Deployer.middleware;
+	(function iter(i) {
+		if (i !== middleware.length) {
+			middleware[i](result).thenEnsure(function () {
+				iter(++i);
+			});
+		} else {
+			dfr.complete('success');
+		}
+	}(0));
+
+	return dfr;
+};
+
+
+/**
+ * Ordered list of middleware
+ * @type {Array.<function(Object) : Deferred>}
+ */
+Deployer.middleware = [];
+Deployer.middleware.push(require('./middleware/starter.js'));
 
 
 module.exports = Deployer;

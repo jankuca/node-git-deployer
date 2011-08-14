@@ -1,4 +1,5 @@
 var HTTP = require('http');
+var Deferred = require('deferred');
 
 
 var Starter = function (name, port) {
@@ -6,7 +7,9 @@ var Starter = function (name, port) {
 	this.port_ = port;
 };
 
-Starter.prototype.restartVersions = function (versions) {
+Starter.prototype.restartVersions = function (versions, callback) {
+	var dfr = new Deffered();
+
 	var self = this;
 	var restarted = [];
 	(function iter(i) {
@@ -21,8 +24,11 @@ Starter.prototype.restartVersions = function (versions) {
 				console.info('The following branches were restarted:');
 				console.info(restarted.join(', '));
 			}
+			dfr.complete('success', restarted);
 		}
 	}(0));
+
+	return dfr;
 };
 
 Starter.prototype.startVersion = function (version, callback) {
@@ -61,4 +67,24 @@ Starter.prototype.startVersion_ = function (version, restart, callback) {
 };
 
 
-module.exports = Starter;
+/**
+ * @param {Object}
+ * @return {Deferred}
+ */
+module.exports = function (result) {
+	var dfr = new Deferred();
+
+	var proxy_port = Number(global.input.params['proxy-port']) || null;
+	if (proxy_port) {
+		var versions = result.updated.map(function (item) {
+			return item[0];
+		});
+		var starter = new Starter(name, proxy_port);
+		starter.restartVersions(versions)
+			.pipe(dfr);
+	} else {
+		dfr.complete('success');
+	}
+
+	return dfr;
+};
