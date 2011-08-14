@@ -1,4 +1,5 @@
 var HTTP = require('http');
+var Path = require('path');
 var Deferred = require('deferred');
 
 
@@ -68,10 +69,11 @@ Starter.prototype.startVersion_ = function (version, restart, callback) {
 
 
 /**
- * @param {Object}
+ * @param {string} target_root Path to the deployment target
+ * @param {Object.{created: Array.<string>, updated: Array.<Array>}} result
  * @return {Deferred}
  */
-module.exports = function (result) {
+module.exports = function (target_root, result) {
 	var dfr = new Deferred();
 
 	var proxy_port = Number(global.input.params['proxy-port']) || null;
@@ -79,6 +81,7 @@ module.exports = function (result) {
 		var versions = result.updated.map(function (item) {
 			return item[0];
 		});
+		var name = Path.basename(target_root, '/');
 		var starter = new Starter(name, proxy_port);
 		starter.restartVersions(versions)
 			.pipe(dfr);

@@ -255,6 +255,7 @@ Deployer.prototype.updateTargets_ = function (targets) {
 Deployer.prototype.startMiddleware_ = function () {
 	var dfr = new Deferred();
 
+	var target_root = this.target_root;
 	var result = {
 		created: this.created_,
 		updated: this.updated_
@@ -262,7 +263,7 @@ Deployer.prototype.startMiddleware_ = function () {
 	var middleware = Deployer.middleware;
 	(function iter(i) {
 		if (i !== middleware.length) {
-			middleware[i](result).thenEnsure(function () {
+			middleware[i](target_root, result).thenEnsure(function () {
 				iter(++i);
 			});
 		} else {
@@ -276,7 +277,10 @@ Deployer.prototype.startMiddleware_ = function () {
 
 /**
  * Ordered list of middleware
- * @type {Array.<function(Object) : Deferred>}
+ * @type {Array.<function(string, Object.{
+ *   created: Array.<string>,
+ *   updated: Array.<Array>
+ * }) : Deferred>} result
  */
 Deployer.middleware = [];
 Deployer.middleware.push(require('./middleware/starter.js'));
