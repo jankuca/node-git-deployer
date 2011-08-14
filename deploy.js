@@ -1,7 +1,5 @@
 var Path = require('path');
 
-require.paths.unshift(Path.join(__dirname, 'lib'));
-
 require('node-color-console');
 
 var Repository = require('node-gitrepo');

@@ -1,12 +1,12 @@
-[submodule "lib/node-gitrepo"]
-	path = lib/node-gitrepo
+[submodule "node_modules/node-gitrepo"]
+	path = node_modules/node-gitrepo
 	url = git://github.com/jankuca/node-gitrepo.git
-[submodule "lib/deferred"]
-	path = lib/deferred
+[submodule "node_modules/deferred"]
+	path = node_modules/deferred
 	url = git://gist.github.com/1124801.git
-[submodule "lib/process-input"]
-	path = lib/process-input
+[submodule "node_modules/process-input"]
+	path = node_modules/process-input
 	url = git://gist.github.com/1083108.git
-[submodule "lib/node-color-console"]
-	path = lib/node-color-console
+[submodule "node_modules/node-color-console"]
+	path = node_modules/node-color-console
 	url = git://gist.github.com/1127679
