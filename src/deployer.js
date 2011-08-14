@@ -12,7 +12,7 @@ var Deployer = function (repo) {
 	this.repo_ = repo;
 
 	this.created_ = [];
-	this.updated_ = [];
+	this.updated_ = {};
 };
 
 /**
@@ -23,11 +23,13 @@ Deployer.prototype.logResults = function () {
 		console.info('The following new deployment targets were created:');
 		console.info(this.created_.join(', '));
 	}
-	if (this.updated_.length) {
+	if (Object.keys(this.updated_).length) {
 		console.info('The following deployment targets were updated:');
-		this.updated_.forEach(function (item) {
+		var updated = this.updated_;
+		Object.keys(updated).forEach(function (version) {
+			var item = updated[version];
 			console.info([
-				item[0], ' (', (item[1] || 'EMPTY'), ' -> ', item[2], ')'
+				version, ' (', (item[0] || 'EMPTY'), ' -> ', item[1], ')'
 			].join(''));
 		});
 	}
@@ -59,7 +61,7 @@ Deployer.prototype.deployTo = function (target_root) {
 			created: this.created_,
 			updated: this.updated_
 		};
-		if (this.created_.length || this.updated_.length) {
+		if (this.created_.length || Object.keys(this.updated_).length) {
 			this.logResults();
 			this.storeBranchState_().thenEnsure(function () {
 				dfr.complete('success', result);
@@ -71,7 +73,7 @@ Deployer.prototype.deployTo = function (target_root) {
 	}
 	function onFailure(err) {
 		console.error('-- The deployment process failed.');
-		if (this.created_.length || this.updated_.length) {
+		if (this.created_.length || Object.keys(this.updated_).length) {
 			console.info('However...');
 			this.logResults();
 		}
@@ -237,7 +239,7 @@ Deployer.prototype.updateTargets_ = function (targets) {
 				if (err) {
 					return dfr.complete('failure', err);
 				}
-				updated.push(target);
+				updated[target[0]] = [target[1], target[2]];
 				iter();
 			});
 		});
@@ -279,7 +281,7 @@ Deployer.prototype.startMiddleware_ = function () {
  * Ordered list of middleware
  * @type {Array.<function(string, Object.{
  *   created: Array.<string>,
- *   updated: Array.<Array>
+ *   updated: Object.{string, Array}
  * }) : Deferred>} result
  */
 Deployer.middleware = [];

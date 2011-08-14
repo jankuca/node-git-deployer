@@ -70,7 +70,7 @@ Starter.prototype.startVersion_ = function (version, restart, callback) {
 
 /**
  * @param {string} target_root Path to the deployment target
- * @param {Object.{created: Array.<string>, updated: Array.<Array>}} result
+ * @param {Object.{created: Array.<string>, updated: Object.{string, Array}} result
  * @return {Deferred}
  */
 module.exports = function (target_root, result) {
@@ -78,11 +78,10 @@ module.exports = function (target_root, result) {
 
 	var proxy_port = Number(global.input.params['proxy-port']) || null;
 	if (proxy_port) {
-		var versions = result.updated.map(function (item) {
-			return item[0];
-		});
 		var name = Path.basename(target_root, '/');
 		var starter = new Starter(name, proxy_port);
+
+		var versions = Object.keys(result.updated);
 		starter.restartVersions(versions)
 			.pipe(dfr);
 	} else {
