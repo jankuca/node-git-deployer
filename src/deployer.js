@@ -88,7 +88,7 @@ Deployer.prototype.deployTo = function (target_root) {
 	}, onFailure, this);
 
 	// Middleware
-	dfr.thenEnsure(this.runMiddleware_(), this);
+	dfr.thenEnsure(this.runMiddleware_, this);
 
 	return dfr;
 };
@@ -285,7 +285,6 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 	var seq = this.getVersionMiddlewareSequence_(version);
 	if (seq.length) {
 		console.info('-- Running middleware sequence for ' + version);
-	} else {
 		(function iter(i) {
 			if (i !== seq.length) {
 				var task = seq[i];
