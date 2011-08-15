@@ -94,8 +94,8 @@ Compiler.prototype.runCompiler_ = function (sources, options, target) {
 		command += ' --js ' + Path.join(root, source);
 	});
 	command += ' --js_output_file ' + Path.join(root, target);
-	Object.keys(options).forEach(function (key) {
-		command += ' --' + key + ' ' + options[key];
+	options.forEach(function (option) {
+		command += ' --' + option[0] + ' ' + option[1];
 	});
 	return command;
 };
