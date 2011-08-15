@@ -14,7 +14,7 @@ module.exports = function (root, version, data) {
 
 	if (Array.isArray(data)) {
 		(function iter(i) {
-			if (i === data.length) {
+			if (i !== data.length) {
 				var path = Path.join(root, version, data[i]);
 				FS.mkdir(path, 0775, function (err) {
 					if (!err) {
