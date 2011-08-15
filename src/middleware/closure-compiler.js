@@ -68,6 +68,7 @@ Compiler.prototype.runCompiler_ = function (sources, options, target) {
 	});
 	proc.on('exit', function (code) {
 		if (code === 0) {
+			console.info('CLOSURE COMPILER: Successfully compiled to ' + target);
 			dfr.complete('success');
 		} else {
 			console.error('CLOSURE COMPILER: Failed to compile to ' + target);
