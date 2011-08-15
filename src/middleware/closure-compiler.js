@@ -89,7 +89,7 @@ Compiler.prototype.runCompiler_ = function (sources, options, target) {
  */
  Compiler.prototype.buildCompilerCommand_ = function (sources, options, target) {
 	var root = this.root_;
-	var command = 'java -jar ' + Path.join(Compiler.closure_root, 'bin', 'compiler.jar');
+	var command = 'java -jar ' + Path.join(module.exports.closure_root, 'bin', 'compiler.jar');
 	sources.forEach(function (source) {
 		command += ' --js ' + Path.join(root, source);
 	});
@@ -111,7 +111,7 @@ Compiler.prototype.runCompiler_ = function (sources, options, target) {
 module.exports = function (root, version, sheet) {
 	var dfr = new Deferred();
 
-	if (!Compiler.closure_root) {
+	if (!module.exports.closure_root) {
 		console.error('CLOSURE COMPILER: Closure root not defined');
 		dfr.complete('failure');
 	} else {
