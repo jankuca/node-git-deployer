@@ -40,7 +40,7 @@ Deployer.prototype.logResults = function () {
  * @param {string} target_root The target repository directory path
  */
 Deployer.prototype.deployTo = function (target_root) {
-	this.target_root = target_root;
+	this.target_root_ = target_root;
 
 	var dfr = new Deferred();
 
@@ -88,7 +88,7 @@ Deployer.prototype.deployTo = function (target_root) {
 	}, onFailure, this);
 
 	// Middleware
-	dfr.thenEnsure(this.startMiddleware_(), this);
+	dfr.thenEnsure(this.runMiddleware_(), this);
 
 	return dfr;
 };
@@ -134,7 +134,7 @@ Deployer.prototype.listBranches_ = function () {
  * Gets previous branch state from an ini file stored in the target root
  */
 Deployer.prototype.getPreviousBranchState_ = function () {
-	var path = Path.join(this.target_root, '.node-git-deployer.json');
+	var path = Path.join(this.target_root_, '.node-git-deployer.json');
 	var state = {};
 	try {
 		state = JSON.parse(FS.readFileSync(path, 'utf8'));
@@ -149,16 +149,16 @@ Deployer.prototype.getPreviousBranchState_ = function () {
  */
 Deployer.prototype.storeBranchState_ = function () {
 	var dfr = new Deferred();
-	var path = Path.join(this.target_root, '.node-git-deployer.json');
+	var path = Path.join(this.target_root_, '.node-git-deployer.json');
 	this.repo_.listBranchesAndTipCommits(function (err, state) {
 		try {
 			FS.writeFileSync(path, JSON.stringify(state), 'utf8');
 			dfr.complete('success');
-		} catch (err) {
+		} catch (write_err) {
 			console.warn('Failed to store the new branch state. ' +
 				'The next deployment will work with the old state.');
-			console.error(err.stack);
-			dfr.complete('failure', err);
+			console.error(write_err.stack);
+			dfr.complete('failure', write_err);
 		}
 	});
 
@@ -173,7 +173,7 @@ Deployer.prototype.storeBranchState_ = function () {
 Deployer.prototype.createNewTargets_ = function (names) {
 	var created = this.created_;
 	var source = this.repo_;
-	var root = this.target_root;
+	var root = this.target_root_;
 	var dfr = new Deferred();
 
 	var i = 0;
@@ -219,7 +219,7 @@ Deployer.prototype.createNewTargets_ = function (names) {
  */
 Deployer.prototype.updateTargets_ = function (targets) {
 	var updated = this.updated_;
-	var root = this.target_root;
+	var root = this.target_root_;
 	var dfr = new Deferred();
 
 	var i = 0;
@@ -249,23 +249,19 @@ Deployer.prototype.updateTargets_ = function (targets) {
 };
 
 /**
- * Loops through all registered middleware and uses them one by one
- *   If a middleware ends with a failure, the loop continues.
- *   This behavior might change in the future.
+ * Loops through all registered middleware for each updated version
+ *   If a middleware sequence for one version ends with a failure,
+ *   the version loop continues.
  * @return {Deferred}
  */
-Deployer.prototype.startMiddleware_ = function () {
+Deployer.prototype.runMiddleware_ = function () {
 	var dfr = new Deferred();
 
-	var target_root = this.target_root;
-	var result = {
-		created: this.created_,
-		updated: this.updated_
-	};
-	var middleware = Deployer.middleware;
+	var self = this;
+	var versions = Object.keys(this.updated_);
 	(function iter(i) {
-		if (i !== middleware.length) {
-			middleware[i](target_root, result).thenEnsure(function () {
+		if (i !== versions.length) {
+			self.runVersionMiddleware_(versions[i]).thenEnsure(function () {
 				iter(++i);
 			});
 		} else {
@@ -276,15 +272,105 @@ Deployer.prototype.startMiddleware_ = function () {
 	return dfr;
 };
 
+/**
+ * Runs registered middleware for the given version
+ *   If one of the middleware fails, the whole sequence ends with a failure.
+ * @param {string} version The name of the version
+ * @return {Deferred}
+ */
+Deployer.prototype.runVersionMiddleware_ = function (version) {
+	var dfr = new Deferred();
+
+	var self = this;
+	var seq = this.getVersionMiddlewareSequence_(version);
+	if (seq.length) {
+		console.info('-- Running middleware sequence for ' + version);
+	} else {
+		(function iter(i) {
+			if (i !== seq.length) {
+				var task = seq[i];
+				var middleware = Deployer.middleware[task.name];
+				middleware(self.target_root_, version, task.data).then(function () {
+					iter(++i);
+				}, function (err) {
+					console.error('-- Middleware sequence for ' + version + ' failed at ' + task.name + '.');
+					dfr.complete('failure', err);
+				});
+			} else {
+				console.info('-- Middleware sequence for ' + version + ' finished successfully.');
+				dfr.complete('success');
+			}
+		}(0));
+	}
+
+	return dfr;
+};
 
 /**
- * Ordered list of middleware
- * @type {Array.<function(string, Object.{
+ * Returns a middleware sequence for the given version
+ * @param {string} version The name of the version
+ * @return {Array.<Object.{name: string, data}>} A middleware sequence
+ */
+Deployer.prototype.getVersionMiddlewareSequence_ = function (version) {
+	var seq = [];
+	var config = this.getVersionConfig_(version, 'middleware');
+	if (config === null) {
+		console.info('-- No middleware configuration found');
+		return seq;
+	}
+	config.forEach(function (item) {
+		item = (typeof item === 'object') ? item : { 'name': item };
+		if (Array.isArray(item['versions']) && item['versions'].indexOf(version) === -1) {
+			return;
+		}
+		if (!item['version'] || item['version'] === version) {
+			seq.push({
+				name: item['name'],
+				data: item['data'] || null
+			});
+		}
+	});
+	return seq;
+};
+
+/**
+ * Retruns configuration for the given version
+ * @param {string} version The name of the version
+ * @param {string} key The configuration key to return
+ * @return {*}
+ */
+Deployer.prototype.getVersionConfig_ = function (version, key) {
+	if (this.config_ === undefined) {
+		this.loadVersionConfig_(version);
+	}
+	if (this.config_ !== null) {
+		return this.config_[key] || null;
+	}
+	return null;
+};
+
+/**
+ * Loads configuration for the given version from a .deployerinfo.json file
+ * @param {string} version The name of the version
+ */
+Deployer.prototype.loadVersionConfig_ = function (version) {
+	var path = Path.join(this.target_root_, version, '.deployerinfo.json');
+	try {
+		var data = FS.readFileSync(path, 'utf8');
+		this.config_ = JSON.parse(data);
+	} catch (err) {
+		this.config_ = null;
+	}
+};
+
+
+/**
+ * @type {Object.<string, function(string, Object.{
  *   created: Array.<string>,
  *   updated: Object.{string, Array}
  * }) : Deferred>} result
  */
-Deployer.middleware = [];
+Deployer.middleware = {};
 
 
 module.exports = Deployer;

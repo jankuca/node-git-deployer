@@ -10,7 +10,10 @@ var input = require('process-input');
 global.input = input; // important for middleware
 
 // Add whatever middleware you need
-Deployer.middleware.push(require('./middleware/starter'));
+Deployer.middleware['restarter'] = require('./src/middleware/restarter');
+Deployer.middleware['closure-compiler'] = require('./src/middleware/closure-compiler');
+
+Deployer.middleware['closure-compiler'].closure_root = input.params['closure-root'];
 
 // Use the source repository
 var source_dirname = process.cwd();
