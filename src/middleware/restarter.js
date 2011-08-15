@@ -25,7 +25,7 @@ Restarter.prototype.restart = function (name, version) {
 		host: 'localhost',
 		port: this.port_,
 		path: '/restart' +
-			'?name=' + encodeURIComponent(name) +
+			'?app=' + encodeURIComponent(name) +
 			'&version=' + encodeURIComponent(version)
 	};
 	var req = HTTP.get(options, function (res) {
