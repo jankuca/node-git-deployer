@@ -12,6 +12,7 @@ global.input = input; // important for middleware
 // Add whatever middleware you need
 Deployer.middleware['restarter'] = require('./src/middleware/restarter');
 Deployer.middleware['closure-compiler'] = require('./src/middleware/closure-compiler');
+Deployer.middleware['directory-creator'] = require('./src/middleware/directory-creator');
 
 Deployer.middleware['closure-compiler'].closure_root = input.params['closure-root'];
 
