@@ -314,7 +314,7 @@ Deployer.prototype.getVersionMiddlewareSequence_ = function (version) {
 	var seq = [];
 	var config = this.getVersionConfig_(version, 'middleware');
 	if (config === null) {
-		console.info('-- No middleware configuration found');
+		console.warn('-- No middleware configuration found');
 		return seq;
 	}
 	config.forEach(function (item) {
