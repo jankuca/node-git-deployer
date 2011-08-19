@@ -2,6 +2,8 @@ var FS = require('fs');
 var Path = require('path');
 var Deferred = require('deferred');
 
+var exec = require('child_process').exec;
+
 
 /**
  * Middleware that creates empty directories
