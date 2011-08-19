@@ -82,6 +82,14 @@ Deployer.prototype.deployTo = function (target_root) {
 	}
 
 	this.listBranches_().then(function (result) {
+		result.created = result.created.map(function (name) {
+			return name.replace('/', '--');
+		});
+		result.updated = result.updated.map(function (item) {
+			item[0].replace('/', '--');
+			return item;
+		});
+
 		this.createNewTargets_(result.created).then(function () {
 			this.updateTargets_(result.updated).then(onSuccess, onFailure, this);
 		}, onFailure, this);
