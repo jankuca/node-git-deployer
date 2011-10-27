@@ -17,17 +17,21 @@ module.exports = function (root, version, data) {
 	if (Array.isArray(data)) {
 		(function iter(i) {
 			if (i !== data.length) {
-				var path = Path.join(root, version, data[i]);
-				var proc = exec('mkdir -m 0777 -p ' + path);
-				proc.on('exit', function (code) {
-					if (code === 0) {
-						console.info('DIRECTORY CREATOR: Created ' + path);
-					} else if (!Path.existsSync(path)) {
-						console.error('DIRECTORY CREATOR: Failed to create ' + path);
-						console.error(err.message);
-					}
+				var path = Path.resolve(root, version, data[i]);
+				if (!Path.existsSync(path)) {
+					var proc = exec('mkdir -m 0777 -p ' + path);
+					proc.on('exit', function (code) {
+						if (code === 0) {
+							console.info('DIRECTORY CREATOR: Created ' + path);
+						} else if (!Path.existsSync(path)) {
+							console.error('DIRECTORY CREATOR: Failed to create ' + path);
+							console.error(err.message);
+						}
+						iter(++i);
+					});
+				} else {
 					iter(++i);
-				});
+				}
 			} else {
 				dfr.complete('success');
 			}
