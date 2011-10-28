@@ -56,7 +56,6 @@ Deployer.prototype.deployTo = function (target_root) {
 	console.info(this.repo_.git_dir, '->', target_root);
 
 	function onSuccess() {
-		console.info('== Successfully deployed!');
 		var result = {
 			created: this.created_,
 			updated: this.updated_
@@ -67,7 +66,7 @@ Deployer.prototype.deployTo = function (target_root) {
 				dfr.complete('success', result);
 			});
 		} else {
-			console.info('However, no changes were made.');
+			console.info('No changes');
 			dfr.complete('success', result);
 		}
 	}
@@ -239,17 +238,25 @@ Deployer.prototype.updateTargets_ = function (targets) {
 		var target = targets[i++];
 		var dirname = Path.join(root, target[0]);
 		var repo = new Repository(dirname);
-		repo.pull('origin', target[0], function (err) {
+		var pull_op = repo.pull('origin', target[0], function (err) {
 			if (err) {
 				return dfr.complete('failure', err);
 			}
-			repo.updateSubmodules(function (err) {
+			var submodule_update_op = repo.updateSubmodules(function (err) {
 				if (err) {
 					return dfr.complete('failure', err);
 				}
 				updated[target[0]] = [target[1], target[2]];
 				iter();
 			});
+
+			submodule_update_op.stdout.on('data', function (chunk) {
+				process.stdout.write(chunk);
+			});
+		});
+
+		pull_op.stdout.on('data', function (chunk) {
+			process.stdout.write(chunk);
 		});
 	}());
 
