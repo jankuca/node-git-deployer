@@ -180,12 +180,12 @@ Compiler.prototype.buildCalcdepsCommand_ = function (input, paths, options, targ
 
 /**
  * Initiates the middleware
- * @param {string} root The path to the deployment target
  * @param {string} version The name of the version
+ * @param {string} dirname The path to the deployment target
  * @param {Object} sheet A map of tasks
  * @return {Deferred}
  */
-module.exports = function (root, version, sheet) {
+module.exports = function (version, dirname, sheet) {
 	var dfr = new Deferred();
 
 	if (!module.exports.closure_root) {
@@ -193,7 +193,7 @@ module.exports = function (root, version, sheet) {
 		dfr.complete('failure');
 	} else {
 		if (sheet && Object.keys(sheet).length) {
-			var compiler = new Compiler(Path.join(root, version));
+			var compiler = new Compiler(dirname);
 			compiler.compile(sheet).pipe(dfr);
 		} else {
 			console.info('CLOSURE COMPILER: Nothing to compile');

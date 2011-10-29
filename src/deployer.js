@@ -357,8 +357,9 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 		(function iter(i) {
 			if (i !== seq.length) {
 				var task = seq[i];
+				var dirname = Path.join(self.target_root_, self.getTempVersionName_(version));
 				var middleware = Deployer.middleware[task.name];
-				middleware(self.target_root_, self.getTempVersionName_(version), task.data).then(function () {
+				middleware(version, dirname, task.data).then(function () {
 					iter(++i);
 				}, function (err) {
 					console.error('-- Middleware sequence for ' + version + ' failed at ' + task.name + '.');

@@ -7,18 +7,18 @@ var exec = require('child_process').exec;
 
 /**
  * Middleware that creates empty directories
- * @param {string} root Path to the deployment target
  * @param {string} version The version name
+ * @param {string} dirname Path to the deployment target
  * @param {*} data
  * @return {Deferred}
  */
-module.exports = function (root, version, data) {
+module.exports = function (version, dirname, data) {
 	var dfr = new Deferred();
 
 	if (Array.isArray(data)) {
 		(function iter(i) {
 			if (i !== data.length) {
-				var path = Path.resolve(root, version, data[i]);
+				var path = Path.resolve(dirname, data[i]);
 				if (!Path.existsSync(path)) {
 					var proc = exec('mkdir -m 0777 -p ' + path);
 					var log = '';

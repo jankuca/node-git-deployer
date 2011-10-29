@@ -54,18 +54,18 @@ Restarter.prototype.restart = function (name, version) {
 
 
 /**
- * @param {string} root Path to the deployment target
  * @param {string} version The version name
+ * @param {string} dirname Path to the deployment target
  * @param {*} data
  * @return {Deferred}
  */
-module.exports = function (root, version, data) {
+module.exports = function (version, dirname, data) {
 	var dfr = new Deferred();
 
 	var proxy_port = Number(global.input.params['proxy-port']);
 	if (proxy_port) {
 		var restarter = new Restarter(proxy_port);
-		var name = Path.basename(root, '/');
+		var name = dirname.match(/\/([^\/]+)\/[^\/]+\/?$/)[1];
 		restarter.restart(name, version).pipe(dfr);
 	} else {
 		console.error('RESTARTER: Proxy port not defined');
