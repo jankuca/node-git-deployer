@@ -21,12 +21,19 @@ module.exports = function (root, version, data) {
 				var path = Path.resolve(root, version, data[i]);
 				if (!Path.existsSync(path)) {
 					var proc = exec('mkdir -m 0777 -p ' + path);
+					var log = '';
+					proc.stdout.on('data', function (chunk) {
+						log += chunk;
+					});
+					proc.stderr.on('data', function (chunk) {
+						log += chunk;
+					});
 					proc.on('exit', function (code) {
 						if (code === 0) {
 							console.info('DIRECTORY CREATOR: Created ' + path);
 						} else if (!Path.existsSync(path)) {
 							console.error('DIRECTORY CREATOR: Failed to create ' + path);
-							console.error(err.message);
+							console.error(log);
 						}
 						iter(++i);
 					});
