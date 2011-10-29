@@ -7,8 +7,9 @@ var exec = require('child_process').exec;
 
 /**
  * Middleware that creates empty directories
- * @param {string} target_root Path to the deployment target
- * @param {Object.{created: Array.<string>, updated: Object.{string, Array}} result
+ * @param {string} root Path to the deployment target
+ * @param {string} version The version name
+ * @param {*} data
  * @return {Deferred}
  */
 module.exports = function (root, version, data) {
