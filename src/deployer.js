@@ -246,12 +246,16 @@ Deployer.prototype.updateTarget_ = function (name) {
 	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(name));
 
 	this.createNewTarget_(this.getTempVersionName_(name)).then(function (repo) {
+		console.info('-- Created an empty deployment target');
+		console.info('-- Pulling current code');
+
 		// Pull the root repository
 		var pull_op = repo.pull('origin', name, function (err) {
 			if (err) {
 				return dfr.complete('failure', err);
 			}
 
+			console.info('-- Pulling the submodule structure');
 			// Update submodules
 			var submodule_update_op = repo.updateSubmodules(function (err) {
 				if (err) {
