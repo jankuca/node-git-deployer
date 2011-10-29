@@ -3,6 +3,8 @@ var Path = require('path');
 var Repository = require('node-gitrepo');
 var Deferred = require('deferred');
 
+var exec = require('child_process').exec;
+
 
 /**
  * @constructor
@@ -11,7 +13,6 @@ var Deferred = require('deferred');
 var Deployer = function (repo) {
 	this.repo_ = repo;
 
-	this.created_ = [];
 	this.updated_ = {};
 };
 
@@ -19,10 +20,6 @@ var Deployer = function (repo) {
  * Outputs deployment process results (created, updated)
  */
 Deployer.prototype.logResults = function () {
-	if (this.created_.length) {
-		console.info('The following new deployment targets were created:');
-		console.info(this.created_.join(', '));
-	}
 	if (Object.keys(this.updated_).length) {
 		console.info('The following deployment targets were updated:');
 		var updated = this.updated_;
@@ -57,22 +54,21 @@ Deployer.prototype.deployTo = function (target_root) {
 
 	function onSuccess() {
 		var result = {
-			created: this.created_,
 			updated: this.updated_
 		};
-		if (this.created_.length || Object.keys(this.updated_).length) {
+		if (Object.keys(this.updated_).length) {
 			this.logResults();
 			this.storeBranchState_().thenEnsure(function () {
 				dfr.complete('success', result);
 			});
 		} else {
-			console.info('No changes');
+			console.info('== No changes');
 			dfr.complete('success', result);
 		}
 	}
 	function onFailure(err) {
 		console.error('-- The deployment process failed.');
-		if (this.created_.length || Object.keys(this.updated_).length) {
+		if (Object.keys(this.updated_).length) {
 			console.info('However...');
 			this.logResults();
 		}
@@ -81,21 +77,20 @@ Deployer.prototype.deployTo = function (target_root) {
 	}
 
 	this.listBranches_().then(function (result) {
-		result.created = result.created.map(function (name) {
-			return name.replace('/', '--');
-		});
 		result.updated = result.updated.map(function (item) {
 			item[0].replace('/', '--');
 			return item;
 		});
 
-		this.createNewTargets_(result.created).then(function () {
-			this.updateTargets_(result.updated).then(onSuccess, onFailure, this);
-		}, onFailure, this);
-	}, onFailure, this);
+		if (result.updated.length !== 0) {
+			console.info('-- The following deployment targets have changes:');
+			console.info(result.updated.map(function (item) {
+				return item[0];
+			}).join(', '));
+		}
 
-	// Middleware
-	dfr.thenEnsure(this.runMiddleware_, this);
+		this.updateTargets_(result.updated).then(onSuccess, onFailure, this);
+	}, onFailure, this);
 
 	return dfr;
 };
@@ -173,62 +168,49 @@ Deployer.prototype.storeBranchState_ = function () {
 };
 
 /**
- * Creates target directories
- * @param {!Array} names A list of target basenames
+ * Creates a target repository
+ * @param	{string} name Target basename
  * @return {!Deferred}
  */
-Deployer.prototype.createNewTargets_ = function (names) {
-	var created = this.created_;
-	var source = this.repo_;
-	var root = this.target_root_;
+Deployer.prototype.createNewTarget_ = function (name) {
 	var dfr = new Deferred();
 
-	var i = 0;
-	(function iter() {
-		if (i === names.length) {
-			return dfr.complete('success');
-		}
+	var root = this.target_root_;
+	var source = this.repo_;
+	var dirname = Path.join(root, name);
 
-		var name = names[i++];
-		var dirname = Path.join(root, name);
-		try {
-			FS.mkdirSync(dirname, 0777);
-		} catch (err) {
-			if (err.code !== 'EEXIST') {
-				return dfr.complete('failure', err);
-			} else {
-				return iter();
-			}
-		}
+	try {
+		FS.mkdirSync(dirname, 0777);
+	} catch (err) {
+		return dfr.complete('failure', err);
+	}
 
-		var target = new Repository(dirname);
-		target.init(function (err) {
+	var target = new Repository(dirname);
+	target.init(function (err) {
+		if (err) {
+			return dfr.complete('failure', err);
+		}
+		target.addRemote('origin', source.git_dir, function (err) {
 			if (err) {
 				return dfr.complete('failure', err);
 			}
-			target.addRemote('origin', source.git_dir, function (err) {
-				if (err) {
-					return dfr.complete('failure', err);
-				}
-				iter();
-			});
-			created.push(name);
+			dfr.complete('success', target);
 		});
-	}());
+	});
 
 	return dfr;
 };
 
 /**
- * Update targets
- * @param {!Array.<Array>} targets A list of targets
+ * Updates deployment targets
+ * @param {!Array.<Array.<string>>} targets A list of targets
  * @return {!Deferred}
  */
 Deployer.prototype.updateTargets_ = function (targets) {
 	var updated = this.updated_;
-	var root = this.target_root_;
 	var dfr = new Deferred();
 
+	var self = this;
 	var i = 0;
 	(function iter() {
 		if (i === targets.length) {
@@ -236,53 +218,111 @@ Deployer.prototype.updateTargets_ = function (targets) {
 		}
 
 		var target = targets[i++];
-		var dirname = Path.join(root, target[0]);
-		var repo = new Repository(dirname);
-		var pull_op = repo.pull('origin', target[0], function (err) {
-			if (err) {
-				return dfr.complete('failure', err);
-			}
-			var submodule_update_op = repo.updateSubmodules(function (err) {
-				if (err) {
-					return dfr.complete('failure', err);
-				}
-				updated[target[0]] = [target[1], target[2]];
-				iter();
-			});
-
-			submodule_update_op.stdout.on('data', function (chunk) {
-				process.stdout.write(chunk);
-			});
-		});
-
-		pull_op.stdout.on('data', function (chunk) {
-			process.stdout.write(chunk);
-		});
+		self.updateTarget_(target[0]).then(function () {
+			updated[target[0]] = [target[1], target[2]];
+		}).thenEnsure(iter);
 	}());
 
 	return dfr;
 };
 
 /**
- * Loops through all registered middleware for each updated version
- *   If a middleware sequence for one version ends with a failure,
- *   the version loop continues.
- * @return {Deferred}
+ * Updates a deployment target and runs its middleware sequence
+ * @param {string} name Target basename
+ * @return {!Deferred}
  */
-Deployer.prototype.runMiddleware_ = function () {
+Deployer.prototype.updateTarget_ = function (name) {
 	var dfr = new Deferred();
 
 	var self = this;
-	var versions = Object.keys(this.updated_);
-	(function iter(i) {
-		if (i !== versions.length) {
-			self.runVersionMiddleware_(versions[i]).thenEnsure(function () {
-				iter(++i);
+	var root = this.target_root_;
+	var dirname = Path.join(root, name);
+	var temp_dirname = Path.join(root, this.getTempVersionName_(name));
+	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(name));
+
+	this.createNewTarget_(this.getTempVersionName_(name)).then(function (repo) {
+		// Pull the root repository
+		var pull_op = repo.pull('origin', name, function (err) {
+			if (err) {
+				return dfr.complete('failure', err);
+			}
+
+			// Update submodules
+			var submodule_update_op = repo.updateSubmodules(function (err) {
+				if (err) {
+					return dfr.complete('failure', err);
+				}
+
+				console.info('-- The deployment target ' + name + ' successfully updated');
+
+				var onSuccess = function () {
+					// Rename the old directory for eventual rollback
+					if (Path.existsSync(dirname)) {
+						FS.renameSync(dirname, rollback_dirname);
+						console.info('-- The old version stored for an eventual rollback');
+					}
+
+					// Rename the new directory to complete the swapping
+					FS.renameSync(temp_dirname, dirname);
+					console.info('== Successfully deployed ' + name);
+				};
+				var onFailure = function () {
+					console.error('== Failed to deploy ' + name);
+
+					self.removeDirectory_(temp_dirname).then(function () {
+						console.info('-- Removed the temporary deployment target ' + temp_dirname);
+					}, function () {
+						console.error('-- Failed to remove the temporary deployment target ' + temp_dirname);
+						console.error('!! You have to solve this situation manually before the next deployment of ' + name + '.');
+						console.log('ssh ' + process.ENV.USER + '@(server) rm -rf ' + temp_dirname);
+					});
+				};
+
+				// Run the middleware sequence
+				self.runVersionMiddleware_(name).then(function () {
+					// Remove the old rollback directory
+					if (Path.existsSync(rollback_dirname)) {
+						self.removeDirectory_(rollback_dirname).then(onSuccess, function () {
+							console.error('-- Failed to remove the rollback directory ' + rollback_dirname);
+							onFailure();
+						});
+					} else {
+						onSuccess();
+					}
+				}, onFailure).then(dfr);
 			});
-		} else {
+			submodule_update_op.stdout.on('data', function (chunk) {
+				process.stdout.write(chunk);
+			});
+		});
+		pull_op.stdout.on('data', function (chunk) {
+			process.stdout.write(chunk);
+		});
+	}, dfr);
+
+	return dfr;
+};
+
+/**
+ * Removes a directory together with all of its contents
+ * @param {string} dirname
+ */
+Deployer.prototype.removeDirectory_ = function (dirname) {
+	var dfr = new Deferred();
+
+	var log = '';
+	var rm_op = exec('rm -rf ' + dirname);
+	rm_op.stdout.on('data', function (chunk) {
+		log += chunk;
+	});
+	rm_op.on('exit', function (code) {
+		if (code === 0) {
 			dfr.complete('success');
+		} else {
+			dfr.complete('failure', new Error(
+				'Failed to remove the directory ' + dirname + ': ' + log));
 		}
-	}(0));
+	});
 
 	return dfr;
 };
@@ -307,7 +347,7 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 			if (i !== seq.length) {
 				var task = seq[i];
 				var middleware = Deployer.middleware[task.name];
-				middleware(self.target_root_, version, task.data).then(function () {
+				middleware(self.target_root_, self.getTempVersionName_(version), task.data).then(function () {
 					iter(++i);
 				}, function (err) {
 					console.error('-- Middleware sequence for ' + version + ' failed at ' + task.name + '.');
@@ -330,7 +370,7 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
  */
 Deployer.prototype.getVersionMiddlewareSequence_ = function (version) {
 	var seq = [];
-	var config = this.getVersionConfig_(version, 'middleware');
+	var config = this.getVersionConfig_(this.getTempVersionName_(version), 'middleware');
 	if (config === null) {
 		console.warn('-- No middleware configuration found');
 		return seq;
@@ -380,12 +420,26 @@ Deployer.prototype.loadVersionConfig_ = function (version) {
 	}
 };
 
+/**
+ * Returns a temporary version name
+ * @param {string} name
+ * @return {string}
+ */
+Deployer.prototype.getTempVersionName_ = function (name) {
+	return '.' + name + '.part';
+};
 
 /**
- * @type {Object.<string, function(string, Object.{
- *   created: Array.<string>,
- *   updated: Object.{string, Array}
- * }) : Deferred>} result
+ * Returns a rollback version name
+ * @param {string} name
+ * @return {string}
+ */
+Deployer.prototype.getRollbackVersionName_ = function (name) {
+	return '.' + name + '.rollback';
+};
+
+/**
+ * @type {Object.<string, function(string, string, *): Deferred>} result
  */
 Deployer.middleware = {};
 
