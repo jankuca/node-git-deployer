@@ -12,8 +12,13 @@ var exec = require('child_process').exec;
  */
 var Deployer = function (repo) {
 	this.repo_ = repo;
-
 	this.updated_ = {};
+
+	this.verbose_logging = false;
+};
+
+Deployer.prototype.enableVerboseLogging = function () {
+	this.verbose_logging = true;
 };
 
 /**
@@ -291,13 +296,19 @@ Deployer.prototype.updateTarget_ = function (name) {
 					}
 				}, onFailure).then(dfr);
 			});
-			submodule_update_op.stdout.on('data', function (chunk) {
+
+			if (self.verbose_logging) {
+				submodule_update_op.stdout.on('data', function (chunk) {
+					process.stdout.write(chunk);
+				});
+			}
+		});
+
+		if (self.verbose_logging) {
+			pull_op.stdout.on('data', function (chunk) {
 				process.stdout.write(chunk);
 			});
-		});
-		pull_op.stdout.on('data', function (chunk) {
-			process.stdout.write(chunk);
-		});
+		}
 	}, dfr);
 
 	return dfr;
