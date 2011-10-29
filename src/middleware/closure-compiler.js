@@ -70,7 +70,16 @@ Compiler.prototype.loop_ = function () {
  */
 Compiler.prototype.runCompiler_ = function (sources, options, target) {
 	var command = this.buildCompilerCommand_(sources, options, target);
-	return this.exec_(command);
+	var dfr = this.exec_(command);
+
+	dfr.then(function () {
+		console.info('CLOSURE COMPILER: Successfully compiled to ' + target);
+	}, function (log) {
+		console.error('CLOSURE COMPILER: Failed to compile to ' + target);
+		console.log(log);
+	});
+
+	return dfr;
 };
 
 /**
