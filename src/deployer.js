@@ -374,6 +374,8 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 				dfr.complete('success');
 			}
 		}(0));
+	} else {
+		dfr.complete('success');
 	}
 
 	return dfr;
