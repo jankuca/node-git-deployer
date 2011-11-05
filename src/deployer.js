@@ -15,6 +15,11 @@ var Deployer = function (repo) {
 	this.updated_ = {};
 
 	this.verbose_logging = false;
+
+	/**
+	 * @type {Object.<string, Array.<function():Deferred>>}
+	 */
+	this.after_update_callbacks_ = {};
 };
 
 Deployer.prototype.enableVerboseLogging = function () {
@@ -256,7 +261,33 @@ Deployer.prototype.updateTarget_ = function (name) {
 
 			// Rename the new directory to complete the swapping
 			FS.renameSync(temp_dirname, dirname);
-			console.info('== Successfully deployed ' + name + (name !== safe_name ? ' as ' + safe_name : ''));
+
+			// Run registered after-update middleware callbacks
+			var callbacks = self.after_update_callbacks_[name];
+			console.info('-- Running registered after-update middleware callbacks (' + callbacks.length + ')');
+			var i = 0;
+			(function iter() {
+				if (i === callbacks.length) {
+					console.info('== Successfully deployed ' + name + (name !== safe_name ? ' as ' + safe_name : ''));
+					dfr.complete('success');
+				} else {
+					var callback = callbacks[i++];
+					callback().then(iter, function (err) {
+						console.error('-- The callback sequence failed. ROLLBACK!');
+
+						FS.renameSync(dirname, temp_dirname);
+						if (Path.existsSync(rollback_dirname)) {
+							FS.renameSync(rollback_dirname, dirname);
+							console.info('-- Successfully rolled back');
+							console.warn('!! Make sure your app is running. The callback sequence might have fucked up pretty bad.');
+						} else {
+							console.info('-- No old version to rollback to');
+						}
+
+						onFailure();
+					});
+				}
+			}());
 		};
 		var onFailure = function () {
 			console.error('== Failed to deploy ' + name);
@@ -302,7 +333,7 @@ Deployer.prototype.updateTarget_ = function (name) {
 					} else {
 						onSuccess();
 					}
-				}, onFailure).then(dfr);
+				}, onFailure);
 			});
 
 			if (self.verbose_logging) {
@@ -357,6 +388,9 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 
 	var safe_version = this.getSafeVersionName(version);
 
+	var callbacks = [];
+	this.after_update_callbacks_[version] = callbacks;
+
 	var self = this;
 	var seq = this.getVersionMiddlewareSequence_(version);
 	if (seq.length) {
@@ -369,7 +403,11 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 				var task = seq[i];
 				var dirname = Path.join(self.target_root_, self.getTempVersionName_(safe_version));
 				var middleware = Deployer.middleware[task.name];
-				middleware(version, dirname, task.data).then(function () {
+				middleware(version, dirname, task.data).then(function (callback) {
+					if (typeof callback === 'function') {
+						// The middleware is registering an after-update callback
+						callbacks.push(callback);
+					}
 					iter(++i);
 				}, function (err) {
 					console.error('-- Middleware sequence for ' + version + ' failed at ' + task.name + '.');
