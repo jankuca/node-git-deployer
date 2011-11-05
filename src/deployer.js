@@ -13,6 +13,7 @@ var exec = require('child_process').exec;
 var Deployer = function (repo) {
 	this.repo_ = repo;
 	this.updated_ = {};
+	this.deleted_ = [];
 
 	this.verbose_logging = false;
 
@@ -39,6 +40,11 @@ Deployer.prototype.logResults = function () {
 				version, ' (', (item[0] || 'EMPTY'), ' -> ', item[1], ')'
 			].join(''));
 		});
+	}
+
+	if (this.deleted_.length) {
+		console.info('The following deployment targets were deleted:');
+		console.info(this.deleted_.join(', '));
 	}
 };
 
@@ -93,8 +99,14 @@ Deployer.prototype.deployTo = function (target_root) {
 				return item[0];
 			}).join(', '));
 		}
+		if (result.deleted.length !== 0) {
+			console.info('-- The following deployment targets are no longer neede:');
+			console.info(result.deleted.join(', '));
+		}
 
-		this.updateTargets_(result.updated).then(onSuccess, onFailure, this);
+		this.deleteTargets_(result.deleted).thenEnsure(function () {
+			this.updateTargets_(result.updated).then(onSuccess, onFailure, this);
+		}, this);
 	}, onFailure, this);
 
 	return dfr;
@@ -111,7 +123,8 @@ Deployer.prototype.listBranches_ = function () {
 	var result = {
 		all: [],
 		created: [],
-		updated: []
+		updated: [],
+		deleted: []
 	};
 
 	this.repo_.listBranchesAndTipCommits(function (err, map) {
@@ -121,6 +134,8 @@ Deployer.prototype.listBranches_ = function () {
 			var prev = self.getPreviousBranchState_();
 			var prev_branches = Object.keys(prev);
 
+			result.deleted = prev_branches.slice();
+
 			Object.keys(map).forEach(function (branch) {
 				if (prev_branches.indexOf(branch) === -1) {
 					result.created.push(branch);
@@ -128,6 +143,13 @@ Deployer.prototype.listBranches_ = function () {
 				} else if (prev[branch] !== map[branch]) {
 					result.updated.push([branch, prev[branch], map[branch]]);
 				}
+
+				// deleted
+				var index = result.deleted.indexOf(branch);
+				if (index !== -1) {
+					delete result.deleted[index];
+				}
+
 				result.all.push(branch);
 			});
 			dfr.complete('success', result);
@@ -202,6 +224,33 @@ Deployer.prototype.createNewTarget_ = function (name) {
 			dfr.complete('success', target);
 		});
 	});
+
+	return dfr;
+};
+
+/**
+ * Updates deployment targets
+ * @param {Array.<string>} targets A list of targets
+ * @return {!Deferred}
+ */
+Deployer.prototype.deleteTargets_ = function (targets) {
+	var deleted = this.deleted_;
+	var dfr = new Deferred();
+
+	var self = this;
+	var i = 0;
+	(function (iter) {
+		if (i === targets.length) {
+			return dfr.complete('success');
+		}
+
+		var name = targets[i++];
+		var dirname = Path.join(root, name);
+		self.removeDirectory_(dirname).then(function () {
+			deleted.push(name);
+			iter();
+		}, iter)
+	}());
 
 	return dfr;
 };
