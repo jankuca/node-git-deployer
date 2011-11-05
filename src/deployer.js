@@ -236,9 +236,7 @@ Deployer.prototype.updateTarget_ = function (name) {
 
 	var self = this;
 	var root = this.target_root_;
-	var safe_name = name
-		.replace(/\./g, '_')
-		.replace(/\//g, '--');
+	var safe_name = this.getSafeVersionName(name);
 	var dirname = Path.join(root, safe_name);
 	var temp_dirname = Path.join(root, this.getTempVersionName_(safe_name));
 	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(safe_name));
@@ -357,6 +355,8 @@ Deployer.prototype.removeDirectory_ = function (dirname) {
 Deployer.prototype.runVersionMiddleware_ = function (version) {
 	var dfr = new Deferred();
 
+	var safe_version = this.getSafeVersionName(version);
+
 	var self = this;
 	var seq = this.getVersionMiddlewareSequence_(version);
 	if (seq.length) {
@@ -367,7 +367,7 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
 		(function iter(i) {
 			if (i !== seq.length) {
 				var task = seq[i];
-				var dirname = Path.join(self.target_root_, self.getTempVersionName_(version));
+				var dirname = Path.join(self.target_root_, self.getTempVersionName_(safe_version));
 				var middleware = Deployer.middleware[task.name];
 				middleware(version, dirname, task.data).then(function () {
 					iter(++i);
@@ -435,13 +435,25 @@ Deployer.prototype.getVersionConfig_ = function (version, key) {
  * @param {string} version The name of the version
  */
 Deployer.prototype.loadVersionConfig_ = function (version) {
-	var path = Path.join(this.target_root_, version, '.deployerinfo.json');
+	var safe_version = this.getSafeVersionName(version);
+	var path = Path.join(this.target_root_, safe_version, '.deployerinfo.json');
 	try {
 		var data = FS.readFileSync(path, 'utf8');
 		this.config_ = JSON.parse(data);
 	} catch (err) {
 		this.config_ = null;
 	}
+};
+
+/**
+ * Returns a safe version name that can be used as a directory name
+ * @param {string} name
+ * @param {string}
+ */
+Deployer.prototype.getSafeVersionName = function (name) {
+	return name
+		.replace(/\./g, '_')
+		.replace(/\//g, '--');
 };
 
 /**
