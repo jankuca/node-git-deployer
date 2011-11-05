@@ -243,7 +243,9 @@ Deployer.prototype.updateTarget_ = function (name) {
 	var temp_dirname = Path.join(root, this.getTempVersionName_(safe_name));
 	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(safe_name));
 
-	this.createNewTarget_(this.getTempVersionName_(name)).then(function (repo) {
+	console.info('== Deploying ' + name + (name !== safe_name ? ' as ' + safe_name : ''));
+
+	this.createNewTarget_(this.getTempVersionName_(safe_name)).then(function (repo) {
 		console.info('-- Created an empty deployment target');
 		console.info('-- Pulling current code');
 
