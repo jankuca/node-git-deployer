@@ -82,13 +82,6 @@ Deployer.prototype.deployTo = function (target_root) {
 	}
 
 	this.listBranches_().then(function (result) {
-		result.updated = result.updated.map(function (item) {
-			item[0] = item[0]
-				.replace(/\./g, '_')
-				.replace(/\//g, '--');
-			return item;
-		});
-
 		if (result.updated.length !== 0) {
 			console.info('-- The following deployment targets have changes:');
 			console.info(result.updated.map(function (item) {
@@ -243,48 +236,53 @@ Deployer.prototype.updateTarget_ = function (name) {
 
 	var self = this;
 	var root = this.target_root_;
-	var dirname = Path.join(root, name);
-	var temp_dirname = Path.join(root, this.getTempVersionName_(name));
-	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(name));
+	var safe_name = name
+		.replace(/\./g, '_')
+		.replace(/\//g, '--');
+	var dirname = Path.join(root, safe_name);
+	var temp_dirname = Path.join(root, this.getTempVersionName_(safe_name));
+	var rollback_dirname = Path.join(root, this.getRollbackVersionName_(safe_name));
 
 	this.createNewTarget_(this.getTempVersionName_(name)).then(function (repo) {
 		console.info('-- Created an empty deployment target');
 		console.info('-- Pulling current code');
 
+		var onSuccess = function () {
+			// Rename the old directory for eventual rollback
+			if (Path.existsSync(dirname)) {
+				FS.renameSync(dirname, rollback_dirname);
+				console.info('-- The old version stored for an eventual rollback');
+			}
+
+			// Rename the new directory to complete the swapping
+			FS.renameSync(temp_dirname, dirname);
+			console.info('== Successfully deployed ' + name + (name !== safe_name ? ' as ' + safe_name : ''));
+		};
+		var onFailure = function () {
+			console.error('== Failed to deploy ' + name);
+
+			self.removeDirectory_(temp_dirname).then(function () {
+				console.info('-- Removed the temporary deployment target ' + temp_dirname);
+			}, function () {
+				console.error('-- Failed to remove the temporary deployment target ' + temp_dirname);
+				console.error('!! You have to solve this situation manually before the next deployment of ' + name + '.');
+				console.log('ssh ' + process.ENV.USER + '@(server) rm -rf ' + temp_dirname);
+			}).thenEnsure(function () {
+				dfr.complete('failure');
+			});
+		};
+
 		// Pull the root repository
 		var pull_op = repo.pull('origin', name, function (err) {
 			if (err) {
-				return dfr.complete('failure', err);
+				console.error('-- Failed to pull the code: ' + err.message);
+				onFailure();
+				return;
 			}
 
 			console.info('-- Pulling the submodule structure');
 			// Update submodules
 			var submodule_update_op = repo.updateSubmodules(function (err) {
-				var onSuccess = function () {
-					// Rename the old directory for eventual rollback
-					if (Path.existsSync(dirname)) {
-						FS.renameSync(dirname, rollback_dirname);
-						console.info('-- The old version stored for an eventual rollback');
-					}
-
-					// Rename the new directory to complete the swapping
-					FS.renameSync(temp_dirname, dirname);
-					console.info('== Successfully deployed ' + name);
-				};
-				var onFailure = function () {
-					console.error('== Failed to deploy ' + name);
-
-					self.removeDirectory_(temp_dirname).then(function () {
-						console.info('-- Removed the temporary deployment target ' + temp_dirname);
-					}, function () {
-						console.error('-- Failed to remove the temporary deployment target ' + temp_dirname);
-						console.error('!! You have to solve this situation manually before the next deployment of ' + name + '.');
-						console.log('ssh ' + process.ENV.USER + '@(server) rm -rf ' + temp_dirname);
-					}).thenEnsure(function () {
-						dfr.complete('failure');
-					});
-				};
-
 				if (err) {
 					console.error('-- Failed to pull all submodules: ' + err.message);
 					onFailure();
