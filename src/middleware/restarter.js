@@ -14,6 +14,44 @@ var Restarter = function (port) {
 };
 
 /**
+ * Sends an update request to the proxy
+ * @return {Deferred}
+ */
+Restarter.prototype.updateProxy = function () {
+	var dfr = new Deferred();
+	var options = {
+		host: 'localhost',
+		port: this.port_,
+		path: '/update'
+	};
+
+	var onFailure = function () {
+		console.error('RESTARTER: Failed to update the proxy');
+		console.warn('!! Make sure the proxy is OK. This is extremely unlikely to happen.');
+		dfr.complete('failure');
+	};
+
+	var req = HTTP.get(options, function (res) {
+		var data = '';
+		res.on('data', function (chunk) {
+			data += chunk;
+		});
+		res.on('end', function () {
+			var result = JSON.parse(data);
+			if (result.updated) {
+				console.info('RESTARTER: Proxy successfully updated');
+				dfr.complete('success');
+			} else {
+				onFailure();
+			}
+		});
+	});
+	req.on('error', onFailure);
+
+	return dfr;
+};
+
+/**
  * Sends a restart request to the proxy
  * @param {string} name The name of the application to restart
  * @param {string} version The version of the applicaion to restart
@@ -61,12 +99,24 @@ Restarter.prototype.restart = function (name, version) {
  */
 module.exports = function (version, dirname, data) {
 	var dfr = new Deferred();
-
 	var proxy_port = Number(global.input.params['proxy-port']);
 	if (proxy_port) {
-		var restarter = new Restarter(proxy_port);
-		var name = dirname.match(/\/([^\/]+)\/[^\/]+\/?$/)[1];
-		restarter.restart(name, version).pipe(dfr);
+		// register an after-update callback
+		// We require the target to be live.
+		console.info('RESTARTER: Registering an after-update callback');
+		dfr.complete('success', function () {
+			var cb_dfr = new Deferred();
+
+			var restarter = new Restarter(proxy_port);
+			restarter.updateProxy().then(function () {
+				var match = dirname.match(/\/([^\/]+)\/\.([^\/]+)\.part\/?$/);
+				var name = match[1];
+				var version = match[2];
+				restarter.restart(name, version).pipe(cb_dfr);
+			}, cb_dfr);
+
+			return cb_dfr;
+		});
 	} else {
 		console.error('RESTARTER: Proxy port not defined');
 		dfr.complete('failure');
