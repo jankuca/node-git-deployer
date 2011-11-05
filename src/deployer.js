@@ -83,7 +83,9 @@ Deployer.prototype.deployTo = function (target_root) {
 
 	this.listBranches_().then(function (result) {
 		result.updated = result.updated.map(function (item) {
-			item[0].replace('/', '--');
+			item[0] = item[0]
+				.replace('.', '_')
+				.replace('/', '--');
 			return item;
 		});
 
