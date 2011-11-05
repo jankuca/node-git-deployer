@@ -393,8 +393,10 @@ Deployer.prototype.runVersionMiddleware_ = function (version) {
  * @return {Array.<Object.{name: string, data}>} A middleware sequence
  */
 Deployer.prototype.getVersionMiddlewareSequence_ = function (version) {
+	var safe_version = this.getSafeVersionName(version);
+
 	var seq = [];
-	var config = this.getVersionConfig_(this.getTempVersionName_(version), 'middleware');
+	var config = this.getVersionConfig_(this.getTempVersionName_(safe_version), 'middleware');
 	if (config === null) {
 		console.warn('-- No middleware configuration found');
 		return seq;
@@ -416,13 +418,13 @@ Deployer.prototype.getVersionMiddlewareSequence_ = function (version) {
 
 /**
  * Retruns configuration for the given version
- * @param {string} version The name of the version
+ * @param {string} safe_version The name of the version
  * @param {string} key The configuration key to return
  * @return {*}
  */
-Deployer.prototype.getVersionConfig_ = function (version, key) {
+Deployer.prototype.getVersionConfig_ = function (safe_version, key) {
 	if (this.config_ === undefined) {
-		this.loadVersionConfig_(version);
+		this.loadVersionConfig_(safe_version);
 	}
 	if (this.config_ !== null) {
 		return this.config_[key] || null;
@@ -432,10 +434,9 @@ Deployer.prototype.getVersionConfig_ = function (version, key) {
 
 /**
  * Loads configuration for the given version from a .deployerinfo.json file
- * @param {string} version The name of the version
+ * @param {string} safe_version The name of the version
  */
-Deployer.prototype.loadVersionConfig_ = function (version) {
-	var safe_version = this.getSafeVersionName(version);
+Deployer.prototype.loadVersionConfig_ = function (safe_version) {
 	var path = Path.join(this.target_root_, safe_version, '.deployerinfo.json');
 	try {
 		var data = FS.readFileSync(path, 'utf8');
