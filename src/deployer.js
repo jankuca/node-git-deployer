@@ -100,7 +100,7 @@ Deployer.prototype.deployTo = function (target_root) {
 			}).join(', '));
 		}
 		if (result.deleted.length !== 0) {
-			console.info('-- The following deployment targets are no longer neede:');
+			console.info('-- The following deployment targets are no longer needed:');
 			console.info(result.deleted.join(', '));
 		}
 
@@ -147,7 +147,7 @@ Deployer.prototype.listBranches_ = function () {
 				// deleted
 				var index = result.deleted.indexOf(branch);
 				if (index !== -1) {
-					delete result.deleted[index];
+					result.deleted.splice(index, 1);
 				}
 
 				result.all.push(branch);
@@ -238,14 +238,16 @@ Deployer.prototype.deleteTargets_ = function (targets) {
 	var dfr = new Deferred();
 
 	var self = this;
+	var root = this.target_root_;
+
 	var i = 0;
-	(function (iter) {
+	(function iter() {
 		if (i === targets.length) {
 			return dfr.complete('success');
 		}
 
 		var name = targets[i++];
-		var dirname = Path.join(root, name);
+		var dirname = Path.join(root, self.getSafeVersionName(name));
 		self.removeDirectory_(dirname).then(function () {
 			deleted.push(name);
 			iter();
