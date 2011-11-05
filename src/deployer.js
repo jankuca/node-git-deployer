@@ -258,12 +258,6 @@ Deployer.prototype.updateTarget_ = function (name) {
 			console.info('-- Pulling the submodule structure');
 			// Update submodules
 			var submodule_update_op = repo.updateSubmodules(function (err) {
-				if (err) {
-					return dfr.complete('failure', err);
-				}
-
-				console.info('-- The deployment target ' + name + ' successfully updated');
-
 				var onSuccess = function () {
 					// Rename the old directory for eventual rollback
 					if (Path.existsSync(dirname)) {
@@ -284,8 +278,18 @@ Deployer.prototype.updateTarget_ = function (name) {
 						console.error('-- Failed to remove the temporary deployment target ' + temp_dirname);
 						console.error('!! You have to solve this situation manually before the next deployment of ' + name + '.');
 						console.log('ssh ' + process.ENV.USER + '@(server) rm -rf ' + temp_dirname);
+					}).thenEnsure(function () {
+						dfr.complete('failure');
 					});
 				};
+
+				if (err) {
+					console.error('-- Failed to pull all submodules: ' + err.message);
+					onFailure();
+					return;
+				}
+
+				console.info('-- The deployment target ' + name + ' successfully updated');
 
 				// Run the middleware sequence
 				self.runVersionMiddleware_(name).then(function () {
