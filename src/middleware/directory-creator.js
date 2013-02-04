@@ -19,7 +19,7 @@ module.exports = function (version, dirname, data) {
 		(function iter(i) {
 			if (i !== data.length) {
 				var path = Path.resolve(dirname, data[i]);
-				if (!Path.existsSync(path)) {
+				if (!FS.existsSync(path)) {
 					var proc = exec('mkdir -m 0777 -p ' + path);
 					var log = '';
 					proc.stdout.on('data', function (chunk) {
@@ -31,7 +31,7 @@ module.exports = function (version, dirname, data) {
 					proc.on('exit', function (code) {
 						if (code === 0) {
 							console.info('DIRECTORY CREATOR: Created ' + path);
-						} else if (!Path.existsSync(path)) {
+						} else if (!FS.existsSync(path)) {
 							console.error('DIRECTORY CREATOR: Failed to create ' + path);
 							console.error(log);
 						}

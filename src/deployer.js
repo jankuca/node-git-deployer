@@ -57,7 +57,7 @@ Deployer.prototype.deployTo = function (target_root) {
 
 	var dfr = new Deferred();
 
-	if (!Path.existsSync(target_root)) {
+	if (!FS.existsSync(target_root)) {
 		var err = new Error('The deployment target root (' + target_root + ') does not exist.');
 		console.error('-- The deployment process could not be initialized.');
 		console.error(err.message);
@@ -305,7 +305,7 @@ Deployer.prototype.updateTarget_ = function (name) {
 
 		var onSuccess = function () {
 			// Rename the old directory for eventual rollback
-			if (Path.existsSync(dirname)) {
+			if (FS.existsSync(dirname)) {
 				FS.renameSync(dirname, rollback_dirname);
 				console.info('-- The old version stored for an eventual rollback');
 			}
@@ -327,7 +327,7 @@ Deployer.prototype.updateTarget_ = function (name) {
 						console.error('-- The callback sequence failed. ROLLBACK!');
 
 						FS.renameSync(dirname, temp_dirname);
-						if (Path.existsSync(rollback_dirname)) {
+						if (FS.existsSync(rollback_dirname)) {
 							FS.renameSync(rollback_dirname, dirname);
 							console.info('-- Successfully rolled back');
 							console.warn('!! Make sure your app is running. The callback sequence might have fucked up pretty bad.');
@@ -376,7 +376,7 @@ Deployer.prototype.updateTarget_ = function (name) {
 				// Run the middleware sequence
 				self.runVersionMiddleware_(name).then(function () {
 					// Remove the old rollback directory
-					if (Path.existsSync(rollback_dirname)) {
+					if (FS.existsSync(rollback_dirname)) {
 						self.removeDirectory_(rollback_dirname).then(onSuccess, function () {
 							console.error('-- Failed to remove the rollback directory ' + rollback_dirname);
 							onFailure();
